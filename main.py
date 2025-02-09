@@ -4,6 +4,7 @@ from data_preprocessing_functions.extract_coordinates import align_and_save_fram
 from data_preprocessing_functions.produce_patches import produce_patches_all_frames, produce_cnn_data
 from plotting_functions.display_certain_patch import display_some_patches
 from plotting_functions.plot_certain_gal_star import plot_a_star_and_a_galaxy
+from plotting_functions.brightness import load_data_from_filepath, plot_mag_distribution, save_mag_distribution
 
 def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set):
     print(f"Downloading files for {len(fields)} fields:")
@@ -48,6 +49,15 @@ def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_se
 def plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id):
     display_some_patches(rerun, run, camcol, patch_size, field, gal_id, star_id)
 
+def brightness_analysis(rerun, run, camcol):
+    mag_gal = load_data_from_filepath(rerun, run, camcol, 'galaxy', 'MODEL')
+    mag_star = load_data_from_filepath(rerun, run, camcol, 'star', 'PSF')
+    mags = mag_gal, mag_star
+    labels = ["galaxy","star"]
+    mag_min = 0
+    mag_max = 35
+    save_mag_distribution(mags, labels, mag_min,mag_max)
+
 def main():
     # Check if command line arguments are provided (for rerun, run, camcol, and fields)
     try:
@@ -72,8 +82,9 @@ def main():
         star_id = 160
 
         try:
-            preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
-            plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
+            #preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
+            #plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
+            brightness_analysis(rerun, run, camcol)
 
         except Exception as e:
             # Print any errors that occur during the download process
