@@ -82,8 +82,8 @@ def main():
         star_id = 160
 
         try:
-            #preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
-            #plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
+            preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
+            plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
             brightness_analysis(rerun, run, camcol)
 
         except Exception as e:
