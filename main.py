@@ -6,7 +6,7 @@ from plotting_functions.display_certain_patch import display_some_patches
 from plotting_functions.plot_certain_gal_star import plot_a_star_and_a_galaxy
 from plotting_functions.brightness import load_data_from_filepath, plot_mag_distribution, save_mag_distribution
 
-def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set):
+def download_data(rerun, run, camcol, fields):
     print(f"Downloading files for {len(fields)} fields:")
     # Download catalog files for stars and galaxies
     print(f"- Star and galaxy catalogs...", end=" ")
@@ -19,10 +19,12 @@ def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_se
 
     print("File downloads successful.")
 
+def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set):
+
     # Aligning frames for different fields and bands
-    print(f"Aligning frames for {len(fields)} fields:")
+    """print(f"Aligning frames for {len(fields)} fields:")
     align_and_save_frames(rerun, run, camcol, fields)
-    print(f"All frames aligned!")
+    print(f"All frames aligned!")"""
 
     # Extracting the coordinates of galaxies and coordinates from the catalogs (in ICRS) and then convert the ICRS into pixel coordinates in images
     print("Extracting galaxy and star coordinates...", end=" ")
@@ -51,7 +53,7 @@ def plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_
 
 def brightness_analysis(rerun, run, camcol):
     mag_gal = load_data_from_filepath(rerun, run, camcol, 'galaxy', 'MODEL')
-    mag_star = load_data_from_filepath(rerun, run, camcol, 'star', 'PSF')
+    mag_star = load_data_from_filepath(rerun, run, camcol, 'star', 'MODEL')
     mags = mag_gal, mag_star
     labels = ["galaxy","star"]
     mag_min = 0
@@ -82,6 +84,7 @@ def main():
         star_id = 160
 
         try:
+            #download_data(rerun, run, camcol, fields)
             preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
             plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
             brightness_analysis(rerun, run, camcol)
