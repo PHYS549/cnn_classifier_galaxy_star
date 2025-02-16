@@ -8,6 +8,7 @@ from astropy.coordinates import SkyCoord
 from astropy.units import deg
 from reproject import reproject_exact
 from tqdm import tqdm
+import pandas as pd
 
 def align_and_save_frames(rerun, run, camcol, fields):
     """
@@ -158,4 +159,23 @@ def extract_field_coords(data, wcs, field, height_ref, width_ref):
                 pixels.append(np.array([width, height]))
     
     return pixels
+
+def filtering(df, field_value=None, ra_range=None, dec_range=None):
+    filtered_df = df.copy()
+    
+    # Filter by FIELD
+    if field_value is not None:
+        filtered_df = filtered_df[(filtered_df['FIELD'] == field_value) or (filtered_df['FIELD'] == field_value + 1) or (filtered_df['FIELD'] == field_value - 1)]
+    
+    # Filter by RA range
+    if ra_range is not None:
+        min_ra, max_ra = ra_range
+        filtered_df = filtered_df[(filtered_df['RA'] >= min_ra) & (filtered_df['RA'] <= max_ra)]
+    
+    # Filter by DEC range
+    if dec_range is not None:
+        min_dec, max_dec = dec_range
+        filtered_df = filtered_df[(filtered_df['DEC'] >= min_dec) & (filtered_df['DEC'] <= max_dec)]
+    
+    return filtered_df
 
