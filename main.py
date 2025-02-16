@@ -5,6 +5,7 @@ from data_preprocessing_functions.produce_patches import produce_patches_all_fra
 from plotting_functions.display_certain_patch import display_some_patches
 from plotting_functions.plot_certain_gal_star import plot_a_star_and_a_galaxy
 from plotting_functions.brightness import load_data_from_filepath, plot_mag_distribution, save_mag_distribution
+from model.cnn_model import cnn_train_model
 
 def download_data(rerun, run, camcol, fields):
     print(f"Downloading files for {len(fields)} fields:")
@@ -22,9 +23,9 @@ def download_data(rerun, run, camcol, fields):
 def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set):
 
     # Aligning frames for different fields and bands
-    """print(f"Aligning frames for {len(fields)} fields:")
+    print(f"Aligning frames for {len(fields)} fields:")
     align_and_save_frames(rerun, run, camcol, fields)
-    print(f"All frames aligned!")"""
+    print(f"All frames aligned!")
 
     # Extracting the coordinates of galaxies and coordinates from the catalogs (in ICRS) and then convert the ICRS into pixel coordinates in images
     print("Extracting galaxy and star coordinates...", end=" ")
@@ -85,9 +86,10 @@ def main():
 
         try:
             #download_data(rerun, run, camcol, fields)
-            preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
-            plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
-            brightness_analysis(rerun, run, camcol)
+            #preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
+            #plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
+            #brightness_analysis(rerun, run, camcol)
+            cnn_train_model()
 
         except Exception as e:
             # Print any errors that occur during the download process

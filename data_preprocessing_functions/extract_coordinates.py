@@ -208,9 +208,8 @@ def filtering_and_extract_pixel(data, wcs, field_ref, height_ref, width_ref):
     for band in ['fluxu', 'fluxg', 'fluxr', 'fluxi', 'fluxz']:
         filtered_df.loc[:, 'MAG_' + band[-1]] = Asinh_Magnitude(filtered_df[band].values, b_values[band])
     
-    filtered_df = filtered_df[(filtered_df['MAG_u'] <23)]
-    filtered_df = filtered_df[(filtered_df['MAG_g'] <24)]
-    filtered_df = filtered_df[(filtered_df['MAG_r'] <23)]
+    filtered_df = filtered_df[(filtered_df['MAG_g'] <23)]
+    filtered_df = filtered_df[(filtered_df['MAG_r'] <22.5)]
     filtered_df = filtered_df[(filtered_df['MAG_i'] <23)]
     filtered_df = filtered_df[(filtered_df['MAG_z'] <23)]
     

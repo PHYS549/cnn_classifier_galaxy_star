@@ -36,6 +36,7 @@ def extract_padded_patches(frame, data, patch_size, patch_half_width):
     left_top = patch_centers - patch_half_width
 
     # Extract patches
+    # Define Patch Size
     patches = np.zeros((len(patch_centers), channels, patch_size, patch_size))
     for idx in range(len(patch_centers)):
         patches[idx] = padded_frame[:, left_top[idx, 1]:right_bottom[idx, 1], left_top[idx, 0]:right_bottom[idx, 0]]
