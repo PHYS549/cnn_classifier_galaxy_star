@@ -6,6 +6,7 @@ from plotting_functions.display_certain_patch import display_some_patches
 from plotting_functions.plot_certain_gal_star import plot_a_star_and_a_galaxy
 from plotting_functions.brightness import load_data_from_filepath, plot_mag_distribution, save_mag_distribution
 from model.cnn_model import cnn_train_model
+from model.cnn_model import visualize_feature_maps
 
 def download_data(rerun, run, camcol, fields):
     print(f"Downloading files for {len(fields)} fields:")
@@ -90,6 +91,11 @@ def main():
             #plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
             #brightness_analysis(rerun, run, camcol)
             cnn_train_model()
+            visualize_feature_maps(
+                model_path="cnn_model_parameters/my_model.h5",
+                data_path="ml_data/patch_size25_frames_10_ref_test/test_data.npy",
+                sample_index=100
+            )
 
         except Exception as e:
             # Print any errors that occur during the download process
