@@ -7,18 +7,18 @@ from tensorflow.keras.layers import Conv2D, AveragePooling2D, Flatten, Dense, Dr
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 
-def cnn_train_model():
+def cnn_train_model(identifier):
     # -------------------------------
     # Load the Data
     # -------------------------------
-    X_train = np.load('ml_data/patch_size25_frames_10_ref_test/train_data.npy')
-    y_train = np.load('ml_data/patch_size25_frames_10_ref_test/train_targets.npy')
+    X_train = np.load('ml_data/'+identifier+'/train_data.npy')
+    y_train = np.load('ml_data/'+identifier+'/train_targets.npy')
 
-    X_val = np.load('ml_data/patch_size25_frames_10_ref_test/val_data.npy')
-    y_val = np.load('ml_data/patch_size25_frames_10_ref_test/val_targets.npy')
+    X_val = np.load('ml_data/'+identifier+'/val_data.npy')
+    y_val = np.load('ml_data/'+identifier+'/val_targets.npy')
 
-    X_test = np.load('ml_data/patch_size25_frames_10_ref_test/test_data.npy')
-    y_test = np.load('ml_data/patch_size25_frames_10_ref_test/test_targets.npy')
+    X_test = np.load('ml_data/'+identifier+'/test_data.npy')
+    y_test = np.load('ml_data/'+identifier+'/test_targets.npy')
 
     # -------------------------------
     # Preprocess the Data
@@ -78,7 +78,7 @@ def cnn_train_model():
     # -------------------------------
     save_dir = "cnn_model_parameters"
     os.makedirs(save_dir, exist_ok=True)
-    model_path = os.path.join(save_dir, "my_model.h5")
+    model_path = os.path.join(save_dir, identifier+"_model.h5")
     model.save(model_path)
     print(f"Model saved to {model_path}")
 
@@ -88,7 +88,7 @@ def visualize_feature_maps(model_path, data_path, sample_index=0):
     
     Parameters:
     - model_path: Path to the saved model file (e.g., 'cnn_model_parameters/my_model.h5').
-    - data_path: Path to the test data file (e.g., 'ml_data/patch_size25_frames_10_ref_test/test_data.npy').
+    - data_path: Path to the test data file (e.g., 'ml_data/'+identifier+'/test_data.npy').
     - sample_index: Index of the test image to visualize (default: 0).
     """
     
@@ -180,8 +180,9 @@ def visualize_feature_maps(model_path, data_path, sample_index=0):
 
 # Example usage:
 if __name__=='__main__':
+    identifier = "patch_size25_frames_10_ref_test"
     visualize_feature_maps(
         model_path="cnn_model_parameters/my_model.h5",
-        data_path="ml_data/patch_size25_frames_10_ref_test/test_data.npy",
+        data_path="ml_data/"+identifier+"/test_data.npy",
         sample_index=0
     )

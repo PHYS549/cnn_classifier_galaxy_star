@@ -1,7 +1,7 @@
 import sys
-from data_preprocessing_functions.download_sdss_data import download_catalog, download_frames
-from data_preprocessing_functions.extract_coordinates import align_and_save_frames, save_target_coords
-from data_preprocessing_functions.produce_patches import produce_patches_all_frames, produce_cnn_data
+from data_preprocessing_functions.sdss_downloader import SDSSDownloader
+from data_preprocessing_functions.frame_aligner import FrameAligner
+from data_preprocessing_functions.sdss_patch_generator import SDSSPatchGenerator
 from plotting_functions.display_certain_patch import display_some_patches
 from plotting_functions.plot_certain_gal_star import plot_a_star_and_a_galaxy
 from plotting_functions.brightness import load_data_from_filepath, plot_mag_distribution, save_mag_distribution
@@ -9,45 +9,50 @@ from model.cnn_model import cnn_train_model
 from model.cnn_model import visualize_feature_maps
 
 def download_data(rerun, run, camcol, fields):
+    sdss_downloader = SDSSDownloader(rerun, run, camcol)
     print(f"Downloading files for {len(fields)} fields:")
     # Download catalog files for stars and galaxies
     print(f"- Star and galaxy catalogs...", end=" ")
-    download_catalog(rerun, run, camcol)
+    sdss_downloader.download_catalog()
     print(f"done!")
 
     # Download the frames for each field in the specified list
-    download_frames(rerun, run, camcol, fields)
+    sdss_downloader.download_frames(fields)
     print(f"done!")
 
     print("File downloads successful.")
 
-def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set):
-
+def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set, filter_brightness):
+    frame_aligner = FrameAligner(rerun, run, camcol, filter_brightness)
     # Aligning frames for different fields and bands
     print(f"Aligning frames for {len(fields)} fields:")
-    align_and_save_frames(rerun, run, camcol, fields)
+    frame_aligner.align_and_save_frames(fields)
     print(f"All frames aligned!")
 
     # Extracting the coordinates of galaxies and coordinates from the catalogs (in ICRS) and then convert the ICRS into pixel coordinates in images
     print("Extracting galaxy and star coordinates...", end=" ")
-    save_target_coords(rerun, run, camcol)
+    frame_aligner.save_target_coords()
     print(f"done!")
 
     print("Field alignments and galaxy/star coordinate extraction successful.")
 
-    identifier = f"patch_size{patch_size}_frames_10_ref_test"
+    if filter_brightness:
+        identifier = f"patch_size{patch_size}_filter_brightness_frames_10_ref_test"
+    else:
+        identifier = f"patch_size{patch_size}_no_filter_frames_10_ref_test"
 
     print(f"\nPreparing data for CNN model...\n")
     print(f"Training fields: {train_set}")
     print(f"Test fields: {test_set}\n")
     print(f"Validation fields: {val_set}")
 
+    sdss_patch_generator = SDSSPatchGenerator(rerun, run, camcol, patch_size)
     print(f"Extracting {patch_size}x{patch_size} patches from {len(fields)} fields:")
-    produce_patches_all_frames(rerun, run, camcol, fields, patch_size)
+    sdss_patch_generator.produce_patches_all_frames(fields)
     print("Patch extraction complete.\n")
 
     print("Generating CNN data...")
-    produce_cnn_data(rerun, run, camcol, train_set, test_set, val_set, patch_size, identifier)
+    sdss_patch_generator.produce_cnn_data(train_set, test_set, val_set, identifier)
     print("CNN data preparation complete.\n")
 
 def plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id):
@@ -85,15 +90,22 @@ def main():
         gal_id = 100
         star_id = 160
 
+        filter_brightness = True
+        if filter_brightness:
+            identifier = f"patch_size{patch_size}_filter_brightness_frames_10_ref_test"
+        else:
+            identifier = f"patch_size{patch_size}_no_filter_frames_10_ref_test"
+
         try:
-            #download_data(rerun, run, camcol, fields)
-            #preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set)
-            #plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
-            #brightness_analysis(rerun, run, camcol)
-            cnn_train_model()
+            download_data(rerun, run, camcol, fields)
+            preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set, filter_brightness)
+            plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
+            brightness_analysis(rerun, run, camcol)
+
+            cnn_train_model(identifier)
             visualize_feature_maps(
-                model_path="cnn_model_parameters/my_model.h5",
-                data_path="ml_data/patch_size25_frames_10_ref_test/test_data.npy",
+                model_path="cnn_model_parameters/"+identifier+"_model.h5",
+                data_path="ml_data/"+identifier+"/test_data.npy",
                 sample_index=100
             )
 
