@@ -1,11 +1,11 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='DataAnalysis_Individual_Project-main',  # Replace with your package name
+    name='cnn_classifier_galaxy_star',  # Replace with your package name
     version='0.1.0',  # Update as needed
     author='Wen-Hua Wu',  # Replace with your name
     author_email='aw106@rice.edu',  # Replace with your email
-    description='A package that utilizes astropy, reproject, and other dependencies',
+    description='A package that utilizes astropy, reproject, tensorflow, and other dependencies',
     url='https://github.com/CrazyAncestor/PhD-Research.git',  # Replace with your repository URL
     packages=find_packages(),
     install_requires=[
@@ -14,7 +14,8 @@ setup(
         'astropy',
         'reproject',
         'matplotlib',
-        'tqdm'
+        'tqdm',
+        'tensorflow'  # Added TensorFlow
     ],
     classifiers=[
         'Programming Language :: Python :: 3',
