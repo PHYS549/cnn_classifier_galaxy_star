@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 class SDSSPatchGenerator:
-    def __init__(self, rerun, run, camcol, patch_size):
+    def __init__(self, rerun, run, camcol, patch_size, filter_brightness, bright_ones=True):
         """
         Initializes the SDSSPatchGenerator with rerun, run, camcol, and patch size.
         
@@ -18,6 +18,8 @@ class SDSSPatchGenerator:
         self.camcol = camcol
         self.patch_size = patch_size
         self.patch_half_width = patch_size // 2
+        self.filter_brightness = filter_brightness
+        self.bright_ones = bright_ones
         self.path = f"./preprocessed_data/rerun_{rerun}/run_{run}/camcol_{camcol}/"
     
     def assert_patch_size_is_odd(self):
@@ -69,12 +71,22 @@ class SDSSPatchGenerator:
     def load_data(self):
         """ Load frames, galaxies, and stars from the specified path. """
         frames = np.load(self.path + "frames_aligned.npy", allow_pickle=True).item()
-        gals = np.load(self.path + "target_gals.npy", allow_pickle=True).item()
-        stars = np.load(self.path + "target_stars.npy", allow_pickle=True).item()
+
+        if self.filter_brightness:
+            if self.bright_ones:
+                gals = np.load(self.path + "bright-target_gals.npy", allow_pickle=True).item()
+                stars = np.load(self.path + "bright-target_stars.npy", allow_pickle=True).item()
+            else:
+                gals = np.load(self.path + "dark-target_gals.npy", allow_pickle=True).item()
+                stars = np.load(self.path + "dark-target_stars.npy", allow_pickle=True).item()
+        else:
+            gals = np.load(self.path + "no_filter-target_gals.npy", allow_pickle=True).item()
+            stars = np.load(self.path + "no_filter-target_stars.npy", allow_pickle=True).item()
         return frames, gals, stars
     
     def produce_patches_all_frames(self, fields):
         """ Produce patches for all frames of the specified fields. """
+
         frames, gals, stars = self.load_data()
     
         gal_patches, star_patches = {}, {}

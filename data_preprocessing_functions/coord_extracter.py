@@ -18,11 +18,12 @@ class CoordExtracter:
         self.preprocessed_path = f"./preprocessed_data/rerun_{self.rerun}/run_{self.run}/camcol_{self.camcol}/"
         os.makedirs(self.preprocessed_path, exist_ok=True)
 
-    def filter_and_save_target_coords(self, filter_brightness):
+    def filter_and_save_target_coords(self, filter_brightness, bright_ones=True):
         """
         Extracts and saves the target coordinates (for galaxies and stars) for all fields.
         """
         self.filter_brightness = filter_brightness
+        self.bright_ones = bright_ones
         raw_path = f"./raw_data/rerun_{self.rerun}/run_{self.run}/camcol_{self.camcol}/"
         frames, gals, stars = self.load_star_gal_data(raw_path)
 
@@ -36,8 +37,16 @@ class CoordExtracter:
             star_num = star_num + len(star_targets[frame_num])
         
         # Save the targets to files after processing
-        np.save(f"{self.preprocessed_path}target_gals", gal_targets)
-        np.save(f"{self.preprocessed_path}target_stars", star_targets)
+        if filter_brightness:
+            if bright_ones:
+                np.save(f"{self.preprocessed_path}bright-target_gals", gal_targets)
+                np.save(f"{self.preprocessed_path}bright-target_stars", star_targets)
+            else:
+                np.save(f"{self.preprocessed_path}dark-target_gals", gal_targets)
+                np.save(f"{self.preprocessed_path}dark-target_stars", star_targets)
+        else:
+            np.save(f"{self.preprocessed_path}no_filter-target_gals", gal_targets)
+            np.save(f"{self.preprocessed_path}no_filter-target_stars", star_targets)
         print("\nTarget coordinates saved!")
         print("Star number:" + str(star_num))
         print("Galaxy number:" + str(gal_num))
@@ -127,10 +136,18 @@ class CoordExtracter:
             for band in ['fluxu', 'fluxg', 'fluxr', 'fluxi', 'fluxz']:
                 filtered_df.loc[:, 'MAG_' + band[-1]] = self.Asinh_Magnitude(filtered_df[band].values, b_values[band])
             
-            filtered_df = filtered_df[(filtered_df['MAG_g'] <23)]
-            filtered_df = filtered_df[(filtered_df['MAG_r'] <22.5)]
-            filtered_df = filtered_df[(filtered_df['MAG_i'] <23)]
-            filtered_df = filtered_df[(filtered_df['MAG_z'] <23)]
+            if self.bright_ones:
+                filtered_df = filtered_df[(filtered_df['MAG_g'] <23)]
+                filtered_df = filtered_df[(filtered_df['MAG_r'] <22.5)]
+                filtered_df = filtered_df[(filtered_df['MAG_i'] <23)]
+                filtered_df = filtered_df[(filtered_df['MAG_z'] <23)]
+            else:
+                filtered_df = filtered_df[
+                    (filtered_df['MAG_g'] >= 23) |
+                    (filtered_df['MAG_r'] >= 22.5) |
+                    (filtered_df['MAG_i'] >= 23) |
+                    (filtered_df['MAG_z'] >= 23)
+                ]
             
         # Return only the (X, Y) pairs as a NumPy array (or modify as needed)
         return filtered_df[['X', 'Y']].to_numpy()
