@@ -1,12 +1,10 @@
 import sys
 from data_preprocessing_functions.sdss_downloader import SDSSDownloader
 from data_preprocessing_functions.frame_aligner import FrameAligner
+from data_preprocessing_functions.coord_extracter import CoordExtracter
 from data_preprocessing_functions.sdss_patch_generator import SDSSPatchGenerator
-from plotting_functions.display_certain_patch import display_some_patches
-from plotting_functions.plot_certain_gal_star import plot_a_star_and_a_galaxy
-from plotting_functions.brightness import load_data_from_filepath, plot_mag_distribution, save_mag_distribution
-from model.cnn_model import cnn_train_model
-from model.cnn_model import visualize_feature_maps
+from model_functions.cnn_model import cnn_train_model, cnn_test_model, visualize_feature_maps, identifier
+
 
 def download_data(rerun, run, camcol, fields):
     sdss_downloader = SDSSDownloader(rerun, run, camcol)
@@ -23,23 +21,24 @@ def download_data(rerun, run, camcol, fields):
     print("File downloads successful.")
 
 def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set, filter_brightness):
-    frame_aligner = FrameAligner(rerun, run, camcol, filter_brightness)
+    frame_aligner = FrameAligner(rerun, run, camcol)
     # Aligning frames for different fields and bands
     print(f"Aligning frames for {len(fields)} fields:")
     frame_aligner.align_and_save_frames(fields)
     print(f"All frames aligned!")
 
     # Extracting the coordinates of galaxies and coordinates from the catalogs (in ICRS) and then convert the ICRS into pixel coordinates in images
+    coord_extracter = CoordExtracter(rerun, run, camcol)
     print("Extracting galaxy and star coordinates...", end=" ")
-    frame_aligner.save_target_coords()
+    coord_extracter.filter_and_save_target_coords(filter_brightness)
     print(f"done!")
 
     print("Field alignments and galaxy/star coordinate extraction successful.")
 
     if filter_brightness:
-        identifier = f"patch_size{patch_size}_filter_brightness_frames_10_ref_test"
+        data_identifier = f"patch_size{patch_size}_filter_brightness_frames_10_ref_test"
     else:
-        identifier = f"patch_size{patch_size}_no_filter_frames_10_ref_test"
+        data_identifier = f"patch_size{patch_size}_no_filter_frames_10_ref_test"
 
     print(f"\nPreparing data for CNN model...\n")
     print(f"Training fields: {train_set}")
@@ -52,20 +51,8 @@ def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_se
     print("Patch extraction complete.\n")
 
     print("Generating CNN data...")
-    sdss_patch_generator.produce_cnn_data(train_set, test_set, val_set, identifier)
+    sdss_patch_generator.produce_cnn_data(train_set, test_set, val_set, data_identifier)
     print("CNN data preparation complete.\n")
-
-def plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id):
-    display_some_patches(rerun, run, camcol, patch_size, field, gal_id, star_id)
-
-def brightness_analysis(rerun, run, camcol):
-    mag_gal = load_data_from_filepath(rerun, run, camcol, 'galaxy', 'MODEL')
-    mag_star = load_data_from_filepath(rerun, run, camcol, 'star', 'MODEL')
-    mags = mag_gal, mag_star
-    labels = ["galaxy","star"]
-    mag_min = 0
-    mag_max = 35
-    save_mag_distribution(mags, labels, mag_min,mag_max)
 
 def main():
     # Check if command line arguments are provided (for rerun, run, camcol, and fields)
@@ -84,30 +71,17 @@ def main():
         test_set = [120, 228]
         val_set = [174]
 
-        # Demonstration
-        field = 103
-        band_num = 1 # g-band for example
-        gal_id = 100
-        star_id = 160
-
         filter_brightness = True
-        if filter_brightness:
-            identifier = f"patch_size{patch_size}_filter_brightness_frames_10_ref_test"
-        else:
-            identifier = f"patch_size{patch_size}_no_filter_frames_10_ref_test"
+
+        data_identifier, model_identifier = identifier(filter_brightness, patch_size, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5)
 
         try:
             download_data(rerun, run, camcol, fields)
             preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set, filter_brightness)
-            plotting_data(rerun, run, camcol, patch_size, field, band_num, gal_id, star_id)
-            brightness_analysis(rerun, run, camcol)
-
-            cnn_train_model(identifier)
-            visualize_feature_maps(
-                model_path="cnn_model_parameters/"+identifier+"_model.h5",
-                data_path="ml_data/"+identifier+"/test_data.npy",
-                sample_index=100
-            )
+            cnn_train_model(data_identifier, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5)
+            cnn_test_model(data_identifier, model_identifier)
+            
+            visualize_feature_maps(model_identifier)
 
         except Exception as e:
             # Print any errors that occur during the download process

@@ -73,14 +73,27 @@ class SDSSDownloader:
     def download_catalog(self):
         """
         Download the galaxy and star catalogs (in FITS format) for a specific run, camcol, and rerun.
+        Skips download if files already exist.
         """
         # Construct URLs for galaxy and star data
         gal_url = self.construct_url(self.BASE_URL, "coords", "-gal.fits.gz")
         star_url = self.construct_url(self.BASE_URL, "coords", "-star.fits.gz")
 
-        # Download the galaxy and star catalogs
-        self.request_and_write(gal_url, self.data_dir + "gal.fits.gz")
-        self.request_and_write(star_url, self.data_dir + "star.fits.gz")
+        # Define file paths
+        gal_file_path = os.path.join(self.data_dir, "gal.fits.gz")
+        star_file_path = os.path.join(self.data_dir, "star.fits.gz")
+
+        # Download the galaxy catalog if not already downloaded
+        if os.path.exists(gal_file_path):
+            print(f"Galaxy catalog already exists at {gal_file_path}. Skipping download.")
+        else:
+            self.request_and_write(gal_url, gal_file_path)
+
+        # Download the star catalog if not already downloaded
+        if os.path.exists(star_file_path):
+            print(f"Star catalog already exists at {star_file_path}. Skipping download.")
+        else:
+            self.request_and_write(star_url, star_file_path)
 
     def download_frame(self, field):
         """
@@ -105,9 +118,16 @@ class SDSSDownloader:
     def download_frames(self, fields):
         """
         Download frames for a list of fields.
+        Skips download for frames that already exist.
 
         Args:
             fields (list): List of field numbers to download.
         """
         for field in tqdm(fields, desc="Downloading frames", unit="frame"):
-            self.download_frame(field)
+            frame_file_path = os.path.join(self.data_dir, f"field_{field}_g.fits.bz2")
+            
+            # Check if frame already exists
+            if os.path.exists(frame_file_path):
+                print(f"Frame for field {field} already exists at {frame_file_path}. Skipping download.")
+            else:
+                self.download_frame(field)

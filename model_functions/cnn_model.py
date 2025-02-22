@@ -3,22 +3,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model, Model
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, AveragePooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Conv2D, AveragePooling2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 
-def cnn_train_model(identifier):
+def identifier(filter_brightness, patch_size, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5):
+    if filter_brightness:
+        data_identifier = f"patch_size{patch_size}_filter_brightness_frames_10_ref_test"
+    else:
+        data_identifier = f"patch_size{patch_size}_no_filter_frames_10_ref_test"
+    model_identifier = data_identifier + f"-epochs-{epochs}-batch_size-{batch_size}-{pooling_scheme}-dropout_rate-{dropout_rate}"
+    return data_identifier, model_identifier
+
+def cnn_train_model(data_identifier, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5):
     # -------------------------------
     # Load the Data
     # -------------------------------
-    X_train = np.load('ml_data/'+identifier+'/train_data.npy')
-    y_train = np.load('ml_data/'+identifier+'/train_targets.npy')
+    X_train = np.load('ml_data/'+data_identifier+'/train_data.npy')
+    y_train = np.load('ml_data/'+data_identifier+'/train_targets.npy')
 
-    X_val = np.load('ml_data/'+identifier+'/val_data.npy')
-    y_val = np.load('ml_data/'+identifier+'/val_targets.npy')
+    X_val = np.load('ml_data/'+data_identifier+'/val_data.npy')
+    y_val = np.load('ml_data/'+data_identifier+'/val_targets.npy')
 
-    X_test = np.load('ml_data/'+identifier+'/test_data.npy')
-    y_test = np.load('ml_data/'+identifier+'/test_targets.npy')
+    X_test = np.load('ml_data/'+data_identifier+'/test_data.npy')
+    y_test = np.load('ml_data/'+data_identifier+'/test_targets.npy')
 
     # -------------------------------
     # Preprocess the Data
@@ -31,25 +39,49 @@ def cnn_train_model(identifier):
     # -------------------------------
     # Build the CNN Model
     # -------------------------------
-    model = Sequential([
-        # First convolution block
-        Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=X_train.shape[1:]),
-        AveragePooling2D(pool_size=(2, 2)),
-        
-        # Second convolution block
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        AveragePooling2D(pool_size=(2, 2)),
-        
-        # Third convolution block
-        Conv2D(128, (3, 3), activation='relu', padding='same'),
-        AveragePooling2D(pool_size=(2, 2)),
-        
-        # Flatten and add Dense layers
-        Flatten(),
-        Dense(128, activation='relu'),
-        Dropout(0.5),
-        Dense(num_classes, activation='softmax')
-    ])
+    if pooling_scheme=='AveragePooling':
+        model = Sequential([
+            # First convolution block
+            Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=X_train.shape[1:]),
+            AveragePooling2D(pool_size=(2, 2)),
+            
+            # Second convolution block
+            Conv2D(64, (3, 3), activation='relu', padding='same'),
+            AveragePooling2D(pool_size=(2, 2)),
+            
+            # Third convolution block
+            Conv2D(128, (3, 3), activation='relu', padding='same'),
+            AveragePooling2D(pool_size=(2, 2)),
+            
+            # Flatten and add Dense layers
+            Flatten(),
+            Dense(128, activation='relu'),
+            Dropout(dropout_rate),
+            Dense(num_classes, activation='softmax')
+        ])
+    elif pooling_scheme=='MaxPooling':
+        model = Sequential([
+            # First convolution block
+            Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=X_train.shape[1:]),
+            MaxPooling2D(pool_size=(2, 2)),
+            
+            # Second convolution block
+            Conv2D(64, (3, 3), activation='relu', padding='same'),
+            MaxPooling2D(pool_size=(2, 2)),
+            
+            # Third convolution block
+            Conv2D(128, (3, 3), activation='relu', padding='same'),
+            MaxPooling2D(pool_size=(2, 2)),
+            
+            # Flatten and add Dense layers
+            Flatten(),
+            Dense(128, activation='relu'),
+            Dropout(dropout_rate),
+            Dense(num_classes, activation='softmax')
+        ])
+    else:
+        print(f"Please give either MaxPooling or AveragePooling as your pooling scheme option")
+        return
 
     # Compile the model.
     model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
@@ -62,8 +94,8 @@ def cnn_train_model(identifier):
     # -------------------------------
     history = model.fit(
         X_train, y_train,
-        batch_size=32,
-        epochs=20,
+        batch_size=batch_size,
+        epochs=epochs,
         validation_data=(X_val, y_val)
     )
 
@@ -78,11 +110,12 @@ def cnn_train_model(identifier):
     # -------------------------------
     save_dir = "cnn_model_parameters"
     os.makedirs(save_dir, exist_ok=True)
-    model_path = os.path.join(save_dir, identifier+"_model.h5")
+    model_identifier = data_identifier + f"-epochs-{epochs}-batch_size-{batch_size}-{pooling_scheme}-dropout_rate-{dropout_rate}"
+    model_path = os.path.join(save_dir, model_identifier+"_model.h5")
     model.save(model_path)
     print(f"Model saved to {model_path}")
 
-def visualize_feature_maps(model_path, data_path, sample_index=0):
+def visualize_feature_maps(identifier, sample_index=None):
     """
     Visualize the feature maps of a saved CNN model after convolutional layers.
     
@@ -95,6 +128,9 @@ def visualize_feature_maps(model_path, data_path, sample_index=0):
     # -------------------------------
     # Load the Model and Data
     # -------------------------------
+    model_path="cnn_model_parameters/"+identifier+"_model.h5"
+    data_path="ml_data/"+identifier+"/test_data.npy"
+                
     if not os.path.exists(model_path):
         print(f"Model not found at {model_path}")
         return
@@ -108,6 +144,9 @@ def visualize_feature_maps(model_path, data_path, sample_index=0):
     print("Test data loaded successfully.")
     
     # Select a sample image from the test set
+    if sample_index == None:
+        sample_index = np.random.randint(len(X_test))
+
     if sample_index >= len(X_test):
         print(f"Sample index {sample_index} is out of bounds.")
         return
@@ -177,6 +216,35 @@ def visualize_feature_maps(model_path, data_path, sample_index=0):
     
     plt.tight_layout()
     plt.show()
+
+def cnn_test_model(data_identifier, model_identifier):
+    # -------------------------------
+    # Load the Data
+    # -------------------------------
+    X_test = np.load('ml_data/'+data_identifier+'/test_data.npy')
+    y_test = np.load('ml_data/'+data_identifier+'/test_targets.npy')
+
+    # -------------------------------
+    # Preprocess the Data
+    # -------------------------------
+    num_classes = 2
+    y_test = to_categorical(y_test, num_classes)
+
+    # -------------------------------
+    # Load and Evaluate the Model
+    # -------------------------------
+    save_dir = "cnn_model_parameters"
+    model_path = os.path.join(save_dir, model_identifier+"_model.h5")
+
+    if not os.path.exists(model_path):
+        print(f"Model not found at {model_path}")
+        return
+    model = load_model(model_path)
+    test_loss, test_acc = model.evaluate(X_test, y_test, verbose = 0)
+    print('\n')
+    print(f"Data Set: {data_identifier}")
+    print(f"Model set {model_identifier} accuracy:{test_acc}")
+
 
 # Example usage:
 if __name__=='__main__':
