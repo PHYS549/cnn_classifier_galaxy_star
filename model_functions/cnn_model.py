@@ -134,112 +134,97 @@ def cnn_train_model(data_identifier, epochs=20, batch_size=32, pooling_scheme='A
     model.save(model_path)
     print(f"Model saved to {model_path}")
 
-
 def visualize_feature_maps(data_identifier, model_identifier, sample_index=None):
-    """
-    Visualize the feature maps of a saved CNN model after convolutional layers.
-    
-    Parameters:
-    - model_path: Path to the saved model file (e.g., 'cnn_model_parameters/my_model.h5').
-    - data_path: Path to the test data file (e.g., 'ml_data/'+identifier+'/test_data.npy').
-    - sample_index: Index of the test image to visualize (default: 0).
-    """
-    
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from tensorflow.keras.models import load_model
+
     # -------------------------------
     # Load the Model and Data
     # -------------------------------
-    model_path="cnn_model_parameters/"+model_identifier+"_model.h5"
-    data_path="ml_data/"+data_identifier+"/test_data.npy"
-                
+    model_path = "cnn_model_parameters/" + model_identifier + "_model.h5"
+    data_path = "ml_data/" + data_identifier + "/test_data.npy"
+
     if not os.path.exists(model_path):
         print(f"Model not found at {model_path}")
         return
     model = load_model(model_path)
     print("Model loaded successfully.")
-    
+
     if not os.path.exists(data_path):
         print(f"Data not found at {data_path}")
         return
     X_test = np.load(data_path)
     print("Test data loaded successfully.")
-    
-    # Select a sample image from the test set
-    if sample_index == None:
-        sample_index = np.random.randint(len(X_test))
 
+    if sample_index is None:
+        sample_index = np.random.randint(len(X_test))
     if sample_index >= len(X_test):
         print(f"Sample index {sample_index} is out of bounds.")
         return
     sample_image = X_test[sample_index]
-    sample_image = np.expand_dims(sample_image, axis=0)  # Add batch dimension
-
+    sample_image = np.expand_dims(sample_image, axis=0)
+    
+    plot_image = np.sum(sample_image, axis=3)
     # -------------------------------
-    # Get Feature Maps
+    # Plot Original Sample Image
     # -------------------------------
-    feature_maps = model.predict(sample_image)
-
-    # Print a summary of the model architecture.
-    model.summary()
-
-    # Assuming 'model' is your loaded/trained model
-    first_conv_layer = model.layers[0]  # Get the first layer
-    second_conv_layer = model.layers[1]  # Get the first layer
-    third_conv_layer = model.layers[2]  # Get the first layer
-
-    # Now pass the sample image through the first convolutional layer
-    layer_output = first_conv_layer(sample_image)
-    layer_output = second_conv_layer(layer_output)
-    layer_output = third_conv_layer(layer_output)
-
-    print("Output shape:", layer_output.shape)
-
-    # -------------------------------
-    # Visualize the Output (Feature Maps)
-    # -------------------------------
-    # Remove the batch dimension; shape becomes (height, width, channels)
-    feature_maps = layer_output[0].numpy() if hasattr(layer_output, "numpy") else layer_output[0]
-    
-    num_filters = feature_maps.shape[-1]
-    
-    # Decide on grid size: here we choose 8 columns, and compute number of rows
-    cols = 8
-    rows = (num_filters + cols - 1) // cols
-    
-    fig, axes = plt.subplots(rows, cols, figsize=(15, 15))
-    fig.suptitle("Feature Maps from First Conv2D Layer", fontsize=16)
-    
-    for i in range(num_filters):
-        row = i // cols
-        col = i % cols
-        ax = axes[row, col] if rows > 1 else axes[col]
-        
-        # Extract the feature map for the current filter
-        feature_map = feature_maps[:, :, i]
-        
-        # Normalize the feature map for better visualization
-        feature_map -= feature_map.mean()
-        feature_map /= (feature_map.std() + 1e-5)
-        feature_map *= 64
-        feature_map += 128
-        feature_map = np.clip(feature_map, 0, 255).astype('uint8')
-        
-        ax.imshow(feature_map, cmap='viridis')
-        ax.set_title(f"Filter {i+1}")
-        ax.axis('off')
-    
-    # Turn off any unused subplots
-    for j in range(i+1, rows * cols):
-        row = j // cols
-        col = j % cols
-        ax = axes[row, col] if rows > 1 else axes[col]
-        ax.axis('off')
-    
-    plt.tight_layout()
+    plt.figure(figsize=(4, 4))
+    plt.imshow(plot_image[0], cmap='gray')  # Assuming grayscale images; change cmap if needed
+    plt.title("Original Sample Image")
+    plt.axis('off')
     result_dir = "result_plots"
-    plot_filename = f"{result_dir}/{model_identifier}_feature_map.png"
-    plt.savefig(plot_filename)
-    print(f"Feature Map saved to {plot_filename}")
+    os.makedirs(result_dir, exist_ok=True)
+    original_image_filename = f"{result_dir}/{model_identifier}_original_sample.png"
+    plt.savefig(original_image_filename)
+    print(f"Original sample image saved to {original_image_filename}")
     plt.close()
+    
+    # -------------------------------
+    # Get Feature Maps from Each Conv Layer
+    # -------------------------------
+
+    conv_layers = [layer for layer in model.layers if 'conv' in layer.name.lower()]
+    layer_output = sample_image
+    for layer_num, conv_layer in enumerate(conv_layers, 1):
+        layer_output = conv_layer(layer_output)
+        feature_maps = layer_output[0].numpy() if hasattr(layer_output, "numpy") else layer_output[0]
+
+        num_filters = min(16, feature_maps.shape[-1])  # Limit to 16 feature maps
+        cols = 4  # Arrange in a 4x4 grid
+        rows = (num_filters + cols - 1) // cols
+
+        fig, axes = plt.subplots(rows, cols, figsize=(10, 10))
+        fig.suptitle(f"Feature Maps after Conv Layer {layer_num}", fontsize=16)
+
+        for i in range(num_filters):
+            row = i // cols
+            col = i % cols
+            ax = axes[row, col] if rows > 1 else axes[col]
+
+            feature_map = feature_maps[:, :, i]
+            feature_map -= feature_map.mean()
+            feature_map /= (feature_map.std() + 1e-5)
+            feature_map *= 64
+            feature_map += 128
+            feature_map = np.clip(feature_map, 0, 255).astype('uint8')
+
+            ax.imshow(feature_map, cmap='viridis')
+            ax.set_title(f"Filter {i+1}")
+            ax.axis('off')
+
+        for j in range(i+1, rows * cols):
+            row = j // cols
+            col = j % cols
+            ax = axes[row, col] if rows > 1 else axes[col]
+            ax.axis('off')
+
+        plt.tight_layout()
+        plot_filename = f"{result_dir}/{model_identifier}_layer_{layer_num}_feature_map.png"
+        plt.savefig(plot_filename)
+        print(f"Feature Map after Conv Layer {layer_num} saved to {plot_filename}")
+        plt.close()
 
 def cnn_test_model(data_identifier, model_identifier):
     # -------------------------------

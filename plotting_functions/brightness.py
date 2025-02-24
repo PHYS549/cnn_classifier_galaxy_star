@@ -24,6 +24,8 @@ def load_data_from_filepath(rerun, run, camcol, star_or_galaxy, flux_type):
         filepath = f"./raw_data/rerun_{rerun}/run_{run}/camcol_{camcol}/star.fits.gz"
 
     hdul = fits.open(filepath)
+    fits.open(f"./raw_data/rerun_{rerun}/run_{run}/camcol_{camcol}/field_111_g.fits.bz2").info()
+    print(fits.open(f"./raw_data/rerun_{rerun}/run_{run}/camcol_{camcol}/field_111_g.fits.bz2")[1].header)
     
     Fluxes = np.array(hdul[1].data[flux_type + "FLUX"]) # Unit: Nanomaggy
     Mag = Asinh_Magnitude(Fluxes)

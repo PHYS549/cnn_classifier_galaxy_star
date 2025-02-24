@@ -15,7 +15,6 @@ def display_patch(gal_patch, star_patch, title=""):
         img = gal_patch[:, :, i]
         vmin, vmax = np.min(img), np.max(img)
         ax.imshow(img, cmap="gray")
-        ax.set_title(f"{band_names[i]}-band\n(min: {vmin:.2f}, max: {vmax:.2f})")
         ax.axis('off')
     
     # Plot the star patch (bottom row)
@@ -25,19 +24,25 @@ def display_patch(gal_patch, star_patch, title=""):
         img = star_patch[:, :, i]
         vmin, vmax = np.min(img), np.max(img)
         ax.imshow(img, cmap="gray")
-        ax.set_title(f"{band_names[i]}-band\n(min: {vmin:.2f}, max: {vmax:.2f})")
         ax.axis('off')
     
     plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to accommodate the suptitle
     plt.show()
 
-def display_some_patches(rerun, run, camcol, patch_size, field, gal_id, star_id):
+def display_some_patches(rerun, run, camcol, patch_size, field, filter_brightness, bright_ones):
     """Display some sample patches from the galaxies and stars."""
-    gal_patches = np.load(f"./preprocessed_data/rerun_{rerun}/run_{run}/camcol_{camcol}/patches{patch_size}_gals.npy", allow_pickle=True).item()
-    star_patches = np.load(f"./preprocessed_data/rerun_{rerun}/run_{run}/camcol_{camcol}/patches{patch_size}_stars.npy", allow_pickle=True).item()
+    if filter_brightness:
+        if bright_ones:
+            filter_name = "bright-"
+        else:
+            filter_name = "dark-"
+    else:
+        filter_name = "no_filter-"
+    gal_patches = np.load(f"./preprocessed_data/rerun_{rerun}/run_{run}/camcol_{camcol}/{filter_name}patches{patch_size}_gals.npy", allow_pickle=True).item()
+    star_patches = np.load(f"./preprocessed_data/rerun_{rerun}/run_{run}/camcol_{camcol}/{filter_name}patches{patch_size}_stars.npy", allow_pickle=True).item()
 
-    gal_patch = gal_patches[str(field)][gal_id]
-    star_patch = star_patches[str(field)][star_id] 
+    gal_patch = gal_patches[str(field)][np.random.randint(len(gal_patches[str(field)]))]
+    star_patch = star_patches[str(field)][np.random.randint(len(star_patches[str(field)]))] 
         
     # Display both galaxy and star patches together
     display_patch(gal_patch, star_patch, title=f"Field {field} - Galaxy vs Star")

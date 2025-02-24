@@ -15,6 +15,18 @@ def identifier_data(rerun, run, camcol, fields, patch_size, filter_brightness, b
         data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-no_filter"
     return data_identifier
 
+def identifier(rerun, run, camcol, fields, patch_size, filter_brightness, bright_ones, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5):
+    if filter_brightness:
+        if bright_ones:
+            data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-bright"
+        else:
+            data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-dark"
+    else:
+        data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-no_filter"
+
+    model_identifier = identifier_model(data_identifier, epochs, batch_size, pooling_scheme, dropout_rate)
+    return data_identifier, model_identifier
+
 def download_data(rerun, run, camcol, fields):
     sdss_downloader = SDSSDownloader(rerun, run, camcol)
     print(f"Downloading files for {len(fields)} fields:")
@@ -119,7 +131,7 @@ def training_model(data_identifier, epochs=20, batch_size=32, pooling_scheme='Av
 def main():
     # Check if command line arguments are provided (for rerun, run, camcol, and fields)
     try:
-        Data8162_generic = process_dataset(
+        """Data8162_generic = process_dataset(
             rerun=301, 
             run=8162, 
             camcol=6, 
@@ -204,7 +216,8 @@ def main():
         accuracies['anotherset_acc'] = cnn_test_model(Data7784_generic, Model_generic)
 
         # Save all accuracies to the same file
-        save_all_accuracies_to_file('result_plots/accuracies.txt', accuracies)
+        save_all_accuracies_to_file('result_plots/accuracies.txt', accuracies)"""
+        Data8162_generic, Model_generic = identifier( rerun=301,run=8162, camcol=6, fields=[80, 103, 111, 120, 147, 174, 177, 214, 222, 228, 116, 90], patch_size=25,  filter_brightness=False, bright_ones=False, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5)
         
         visualize_feature_maps(Data8162_generic, Model_generic)
 

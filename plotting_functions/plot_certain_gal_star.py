@@ -20,7 +20,7 @@ def load_star_gal_data(path):
             stars = fits.open(path + file)[1]
     return frames, gals, stars
 
-def plot_object_on_frame(rerun, run, camcol, field, band_num, object_type, object_index, ax=None, color='red', marker='x'):
+def plot_object_on_frame(rerun, run, camcol, field, filter_brightness, bright_ones, band_num, object_type, ax=None, color='red', marker='x'):
     """
     Plots the position of a specific object (star or galaxy) on a specific frame.
     
@@ -31,7 +31,6 @@ def plot_object_on_frame(rerun, run, camcol, field, band_num, object_type, objec
     field (int): The field number
     band_num (int): The band number (0 for u, 1 for g, 2 for r, etc.)
     object_type (str): Type of object ('star' or 'galaxy')
-    object_index (int): Index of the object in the target list (starting from 0)
     ax (matplotlib axis, optional): Axis to plot on (useful for overlaying multiple objects)
     color (str, optional): Color of the marker (default is 'red')
     marker (str, optional): Marker style for the object (default is 'x')
@@ -46,10 +45,20 @@ def plot_object_on_frame(rerun, run, camcol, field, band_num, object_type, objec
     frame_data = frame_data[band_num]
     
     # Get the target coordinates (stars or galaxies)
+    if filter_brightness:
+        if bright_ones:
+            gals = np.load(path + "bright-target_gals.npy", allow_pickle=True).item()
+            stars = np.load(path + "bright-target_stars.npy", allow_pickle=True).item()
+        else:
+            gals = np.load(path + "dark-target_gals.npy", allow_pickle=True).item()
+            stars = np.load(path + "dark-target_stars.npy", allow_pickle=True).item()
+    else:
+        gals = np.load(path + "no_filter-target_gals.npy", allow_pickle=True).item()
+    
     if object_type == 'star':
-        targets = np.load(f"{path}target_stars.npy", allow_pickle=True).item()
+        targets = stars
     elif object_type == 'galaxy':
-        targets = np.load(f"{path}target_gals.npy", allow_pickle=True).item()
+        targets = gals
     else:
         raise ValueError("Invalid object_type. Choose 'star' or 'galaxy'.")
     
@@ -58,8 +67,8 @@ def plot_object_on_frame(rerun, run, camcol, field, band_num, object_type, objec
     object_pixels = targets[str(field)]
     
     # Check if the index is valid
-    if object_index >= len(object_pixels):
-        raise IndexError(f"Object index {object_index} is out of bounds for field {field}.")
+    object_index = np.random.randint(len(object_pixels))
+    
     
     # Get the coordinates of the specific object
     object_coord = object_pixels[object_index]
@@ -74,12 +83,12 @@ def plot_object_on_frame(rerun, run, camcol, field, band_num, object_type, objec
     
     return ax
 
-def plot_a_star_and_a_galaxy(rerun, run, camcol, field, band_num, gal_id, star_id):
+def plot_a_star_and_a_galaxy(rerun, run, camcol, field, filter_brightness, bright_ones, band_num):
     # Plotting both objects (star and galaxy) on the same frame
-    ax = plot_object_on_frame(rerun, run, camcol, field, band_num, 'star', star_id, color='red', marker='x')
+    ax = plot_object_on_frame(rerun, run, camcol, field, filter_brightness, bright_ones, band_num, 'star', color='red', marker='x')
 
     # Now plot the galaxy on the same axis with different color and marker
-    plot_object_on_frame(rerun, run, camcol, field, band_num, 'galaxy', gal_id, ax=ax, color='blue', marker='o')
+    plot_object_on_frame(rerun, run, camcol, field, filter_brightness, bright_ones, band_num, 'galaxy', ax=ax, color='blue', marker='o')
 
     # Add labels and title
     ax.set_title(f"Star and Galaxy Positions on Frame {field}")

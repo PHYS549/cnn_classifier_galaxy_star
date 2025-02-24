@@ -100,8 +100,16 @@ class SDSSPatchGenerator:
                 gal_patches[field_str], star_patches[field_str] = self.produce_patches_per_frame(frame, gal, star)
         
         print("Saving patches...")
-        np.save(self.path + f"patches{self.patch_size}_gals.npy", gal_patches)
-        np.save(self.path + f"patches{self.patch_size}_stars.npy", star_patches)
+        if self.filter_brightness:
+            if self.bright_ones:
+                filter_name = "bright-"
+            else:
+                filter_name = "dark-"
+        else:
+            filter_name = "no_filter-"
+        
+        np.save(self.path + f"{filter_name}patches{self.patch_size}_gals.npy", gal_patches)
+        np.save(self.path + f"{filter_name}patches{self.patch_size}_stars.npy", star_patches)
     
     def produce_set_data(self, gal_patches, star_patches, fields, set_name="training set"):
         """ Prepare the data and target labels for training. """
@@ -138,8 +146,15 @@ class SDSSPatchGenerator:
     
     def produce_cnn_data(self, train_fields, test_fields, val_fields, identifier):
         """ Generate and save CNN data (train, validation, and test sets). """
-        gal_patches = np.load(self.path + f"patches{self.patch_size}_gals.npy", allow_pickle=True).item()
-        star_patches = np.load(self.path + f"patches{self.patch_size}_stars.npy", allow_pickle=True).item()
+        if self.filter_brightness:
+            if self.bright_ones:
+                filter_name = "bright-"
+            else:
+                filter_name = "dark-"
+        else:
+            filter_name = "no_filter-"
+        gal_patches = np.load(self.path + f"{filter_name}patches{self.patch_size}_gals.npy", allow_pickle=True).item()
+        star_patches = np.load(self.path + f"{filter_name}patches{self.patch_size}_stars.npy", allow_pickle=True).item()
     
         print("Preparing ML data...")
         train_data, train_targets = self.produce_set_data(gal_patches, star_patches, train_fields, set_name="training set")
