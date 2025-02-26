@@ -67,7 +67,7 @@ def cnn_train_model(data_identifier, epochs=20, batch_size=32, pooling_scheme='A
         return
 
     # Compile the model
-    model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=Adam(learning_rate=1e-5), loss='categorical_crossentropy', metrics=['accuracy'])
     model.summary()
 
     # -------------------------------

@@ -131,7 +131,7 @@ def training_model(data_identifier, epochs=20, batch_size=32, pooling_scheme='Av
 def main():
     # Check if command line arguments are provided (for rerun, run, camcol, and fields)
     try:
-        """Data8162_generic = process_dataset(
+        Data8162_generic = process_dataset(
             rerun=301, 
             run=8162, 
             camcol=6, 
@@ -216,7 +216,7 @@ def main():
         accuracies['anotherset_acc'] = cnn_test_model(Data7784_generic, Model_generic)
 
         # Save all accuracies to the same file
-        save_all_accuracies_to_file('result_plots/accuracies.txt', accuracies)"""
+        save_all_accuracies_to_file('result_plots/accuracies.txt', accuracies)
         Data8162_generic, Model_generic = identifier( rerun=301,run=8162, camcol=6, fields=[80, 103, 111, 120, 147, 174, 177, 214, 222, 228, 116, 90], patch_size=25,  filter_brightness=False, bright_ones=False, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5)
         
         visualize_feature_maps(Data8162_generic, Model_generic)
