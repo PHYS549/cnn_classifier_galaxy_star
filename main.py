@@ -4,23 +4,18 @@ from data_preprocessing_functions.frame_aligner import FrameAligner
 from data_preprocessing_functions.coord_extracter import CoordExtracter
 from data_preprocessing_functions.sdss_patch_generator import SDSSPatchGenerator
 from model_functions.cnn_model import cnn_train_model, cnn_test_model, visualize_feature_maps, identifier_model
+import matplotlib.pyplot as plt
 
-def identifier_data(rerun, run, camcol, fields, patch_size, filter_brightness, bright_ones):
+def identifier_data(rerun, run, camcol, fields, patch_size, filter_brightness, filter_mag):
     if filter_brightness:
-        if bright_ones:
-            data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-bright"
-        else:
-            data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-dark"
+        data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-filter-mag-{filter_mag}"
     else:
         data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-no_filter"
     return data_identifier
 
-def identifier(rerun, run, camcol, fields, patch_size, filter_brightness, bright_ones, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5):
+def identifier(rerun, run, camcol, fields, patch_size, filter_brightness, filter_mag, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5):
     if filter_brightness:
-        if bright_ones:
-            data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-bright"
-        else:
-            data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-dark"
+        data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-filter-mag-{filter_mag}"
     else:
         data_identifier = f"rerun{rerun}-run{run}-camcol{camcol}-fields{fields[0]}etc-patch_size{patch_size}-no_filter"
 
@@ -41,7 +36,7 @@ def download_data(rerun, run, camcol, fields):
 
     print("File downloads successful.")
 
-def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set, filter_brightness, bright_ones):
+def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_set, val_set, filter_brightness, filter_mag):
     frame_aligner = FrameAligner(rerun, run, camcol)
     # Aligning frames for different fields and bands
     print(f"Aligning frames for {len(fields)} fields:")
@@ -51,7 +46,7 @@ def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_se
     # Extracting the coordinates of galaxies and coordinates from the catalogs (in ICRS) and then convert the ICRS into pixel coordinates in images
     coord_extracter = CoordExtracter(rerun, run, camcol)
     print("Extracting galaxy and star coordinates...", end=" ")
-    coord_extracter.filter_and_save_target_coords(filter_brightness, bright_ones)
+    coord_extracter.filter_and_save_target_coords(filter_brightness, filter_mag)
     print(f"done!")
 
     print("Field alignments and galaxy/star coordinate extraction successful.")
@@ -60,13 +55,13 @@ def preprocesing_data(rerun, run, camcol, fields, patch_size, train_set, test_se
     print(f"Test fields: {test_set}\n")
     print(f"Validation fields: {val_set}")
 
-    sdss_patch_generator = SDSSPatchGenerator(rerun, run, camcol, patch_size, filter_brightness, bright_ones)
+    sdss_patch_generator = SDSSPatchGenerator(rerun, run, camcol, patch_size, filter_brightness, filter_mag)
     print(f"Extracting {patch_size}x{patch_size} patches from {len(fields)} fields:")
     sdss_patch_generator.produce_patches_all_frames(fields)
     print("Patch extraction complete.\n")
 
     print("Generating CNN data...")
-    data_identifier = identifier_data(rerun, run, camcol, fields, patch_size, filter_brightness, bright_ones)
+    data_identifier = identifier_data(rerun, run, camcol, fields, patch_size, filter_brightness, filter_mag)
     sdss_patch_generator.produce_cnn_data(train_set, test_set, val_set, data_identifier)
     print("CNN data preparation complete.\n")
 
@@ -78,7 +73,8 @@ def process_dataset(
     patch_size=25, 
     field_splits=None, 
     filter_brightness=True, 
-    bright_ones=True
+    bright_ones=True,
+    filter_mag=23
 ):
     """
     Simplified function to download, preprocess, and identify data in one call.
@@ -91,7 +87,7 @@ def process_dataset(
         patch_size (int): Size of patches for preprocessing.
         field_splits (dict): Dictionary with keys 'train', 'test', 'val' and corresponding field lists.
         filter_brightness (bool): Whether to filter by brightness.
-        bright_ones (bool): Whether to select bright objects.
+        bright_ones, filter_mag (bool): Whether to select bright objects.
     """
     if fields is None:
         fields = [80, 103, 111, 120, 147, 174, 177, 214, 222, 228]
@@ -111,11 +107,11 @@ def process_dataset(
         preprocesing_data(
             rerun, run, camcol, fields, patch_size, 
             field_splits["train"], field_splits["test"], field_splits["val"], 
-            filter_brightness, bright_ones
+            filter_brightness, filter_mag
         )
         
         # Step 3: Generate a data identifier
-        data_identifier = identifier_data(rerun, run, camcol, fields, patch_size, filter_brightness, bright_ones)
+        data_identifier = identifier_data(rerun, run, camcol, fields, patch_size, filter_brightness, filter_mag)
         
         print(f"Data preparation complete. Identifier: {data_identifier}")
         return data_identifier
@@ -144,35 +140,26 @@ def main():
             }, 
             filter_brightness=False, 
         )
-        Data8162_bright = process_dataset(
-            rerun=301, 
-            run=8162, 
-            camcol=6, 
-            fields=[80, 103, 111, 120, 147, 174, 177, 214, 222, 228, 116, 90], 
-            patch_size=25, 
-            field_splits = {
-                "train": [80, 103, 111, 147, 177, 214, 222],
-                "test": [120, 228],
-                "val": [174, 116, 90]
-            }, 
-            filter_brightness=True, 
-            bright_ones=True, 
-        )
-        Data8162_dark = process_dataset(
-            rerun=301, 
-            run=8162, 
-            camcol=6, 
-            fields=[80, 103, 111, 120, 147, 174, 177, 214, 222, 228, 116, 90], 
-            patch_size=25, 
-            field_splits = {
-                "train": [80, 103, 111, 147, 177, 214, 222],
-                "test": [120, 228],
-                "val": [174, 116, 90]
-            }, 
-            filter_brightness=True, 
-            bright_ones=False, 
-        )
-        
+        Magnitudes = [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+        Data8162_mags = []
+        for i in range(len(Magnitudes)):
+            Data8162_mags.append(process_dataset(
+                rerun=301, 
+                run=8162, 
+                camcol=6, 
+                fields=[80, 103, 111, 120, 147, 174, 177, 214, 222, 228, 116, 90], 
+                patch_size=25, 
+                field_splits = {
+                    "train": [],
+                    "test": [120, 228],
+                    "val": []
+                }, 
+                filter_brightness=True, 
+                bright_ones=True, 
+                filter_mag=Magnitudes[i]
+                )
+            )
+                
         Data7784_generic = process_dataset(
             rerun=301, 
             run=7784, 
@@ -188,7 +175,6 @@ def main():
         )
 
         Model_generic = training_model(Data8162_generic, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5)
-        Model_bright = training_model(Data8162_bright, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5)
         Model_MaxPooling = training_model(Data8162_generic, epochs=20, batch_size=32, pooling_scheme='MaxPooling', dropout_rate=0.5)
         Model_highdropout = training_model(Data8162_generic, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.75)
         Model_nodropout = training_model(Data8162_generic, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.)
@@ -204,21 +190,39 @@ def main():
         accuracies = {}
 
         # Run tests and store the results
-        accuracies['gg_acc'] = cnn_test_model(Data8162_generic, Model_generic)
-        accuracies['bg_acc'] = cnn_test_model(Data8162_bright, Model_generic)
-        accuracies['dg_acc'] = cnn_test_model(Data8162_dark, Model_generic)
-        accuracies['gb_acc'] = cnn_test_model(Data8162_generic, Model_bright)
-        accuracies['bb_acc'] = cnn_test_model(Data8162_bright, Model_bright)
-        accuracies['db_acc'] = cnn_test_model(Data8162_dark, Model_bright)
+        accuracies['generic_acc'] = cnn_test_model(Data8162_generic, Model_generic)
+
+        for i in range(len(Magnitudes)):
+            accuracies[f"mag-{Magnitudes[i]}_acc"] = cnn_test_model(Data8162_mags[i], Model_generic)
+        
         accuracies['maxpooling_acc'] = cnn_test_model(Data8162_generic, Model_MaxPooling)
         accuracies['highdropout_acc'] = cnn_test_model(Data8162_generic, Model_highdropout)
         accuracies['nodropout_acc'] = cnn_test_model(Data8162_generic, Model_nodropout)
         accuracies['anotherset_acc'] = cnn_test_model(Data7784_generic, Model_generic)
 
+        # Assuming Magnitudes and accuracies are already defined
+        magnitudes = Magnitudes  # The list or array of magnitudes
+        accuracy_values = [accuracies[f"mag-{mag}_acc"] for mag in magnitudes]  # Extract accuracies for each magnitude
+
+        # Plotting the data
+        plt.figure(figsize=(8, 6))
+        plt.plot(magnitudes, accuracy_values, marker='o', linestyle='-', color='b')  # Change color or style as needed
+
+        # Labeling the axes
+        plt.xlabel('Magnitudes')
+        plt.ylabel('Accuracies')
+        plt.title('Magnitudes vs. Accuracies')
+
+        # Optionally, add grid lines for better readability
+        plt.grid(True)
+        # Save the plot to the specified directory
+        plt.savefig('result_plots/magnitudes_vs_accuracies.png')
+
+        # Close the plot to free up memory
+        plt.close()
+
         # Save all accuracies to the same file
         save_all_accuracies_to_file('result_plots/accuracies.txt', accuracies)
-        Data8162_generic, Model_generic = identifier( rerun=301,run=8162, camcol=6, fields=[80, 103, 111, 120, 147, 174, 177, 214, 222, 228, 116, 90], patch_size=25,  filter_brightness=False, bright_ones=False, epochs=20, batch_size=32, pooling_scheme='AveragePooling', dropout_rate=0.5)
-        
         visualize_feature_maps(Data8162_generic, Model_generic)
 
     except Exception as e:

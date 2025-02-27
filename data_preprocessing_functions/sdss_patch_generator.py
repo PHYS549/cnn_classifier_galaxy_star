@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 class SDSSPatchGenerator:
-    def __init__(self, rerun, run, camcol, patch_size, filter_brightness, bright_ones=True):
+    def __init__(self, rerun, run, camcol, patch_size, filter_brightness, filter_mag = 23):
         """
         Initializes the SDSSPatchGenerator with rerun, run, camcol, and patch size.
         
@@ -19,7 +19,7 @@ class SDSSPatchGenerator:
         self.patch_size = patch_size
         self.patch_half_width = patch_size // 2
         self.filter_brightness = filter_brightness
-        self.bright_ones = bright_ones
+        self.filter_mag = filter_mag
         self.path = f"./preprocessed_data/rerun_{rerun}/run_{run}/camcol_{camcol}/"
     
     def assert_patch_size_is_odd(self):
@@ -73,12 +73,9 @@ class SDSSPatchGenerator:
         frames = np.load(self.path + "frames_aligned.npy", allow_pickle=True).item()
 
         if self.filter_brightness:
-            if self.bright_ones:
-                gals = np.load(self.path + "bright-target_gals.npy", allow_pickle=True).item()
-                stars = np.load(self.path + "bright-target_stars.npy", allow_pickle=True).item()
-            else:
-                gals = np.load(self.path + "dark-target_gals.npy", allow_pickle=True).item()
-                stars = np.load(self.path + "dark-target_stars.npy", allow_pickle=True).item()
+            gals = np.load(self.path + f"filter-mag-{self.filter_mag}-target_gals.npy", allow_pickle=True).item()
+            stars = np.load(self.path + f"filter-mag-{self.filter_mag}-target_stars.npy", allow_pickle=True).item()
+
         else:
             gals = np.load(self.path + "no_filter-target_gals.npy", allow_pickle=True).item()
             stars = np.load(self.path + "no_filter-target_stars.npy", allow_pickle=True).item()
@@ -101,10 +98,7 @@ class SDSSPatchGenerator:
         
         print("Saving patches...")
         if self.filter_brightness:
-            if self.bright_ones:
-                filter_name = "bright-"
-            else:
-                filter_name = "dark-"
+            filter_name = f"filter-mag-{self.filter_mag}-"
         else:
             filter_name = "no_filter-"
         
@@ -147,10 +141,7 @@ class SDSSPatchGenerator:
     def produce_cnn_data(self, train_fields, test_fields, val_fields, identifier):
         """ Generate and save CNN data (train, validation, and test sets). """
         if self.filter_brightness:
-            if self.bright_ones:
-                filter_name = "bright-"
-            else:
-                filter_name = "dark-"
+            filter_name = f"filter-mag-{self.filter_mag}-"
         else:
             filter_name = "no_filter-"
         gal_patches = np.load(self.path + f"{filter_name}patches{self.patch_size}_gals.npy", allow_pickle=True).item()
